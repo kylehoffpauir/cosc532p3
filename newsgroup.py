@@ -12,6 +12,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn import metrics
 import nltk
 from nltk.stem.porter import PorterStemmer
+#nltk.download('punkt')
 
 
 # feature selection --> distance measure --> clustering
@@ -49,22 +50,15 @@ def tokenize(text):
     return stems
 
 english_stemmer = nltk.stem.SnowballStemmer('english')
-vectorizer = TfidfVectorizer(tokenizer=tokenize, stop_words={'english'})
+vectorizer = TfidfVectorizer(min_df=10, max_df=0.5, tokenizer=tokenize, stop_words={'english'})
+#vectorizer = TfidfVectorizer(stop_words={'english'})
 
 x = vectorizer.fit_transform(newsgroups_train.data)
 
-# testing our fit on the test set to see how good we get our clusters
-clf = MultinomialNB(alpha=.01)
-vectors_test = vectorizer.transform(newsgroups_test.data)
-clf.fit(x, newsgroups_train.target)
-pred = clf.predict(vectors_test)
-
-print(metrics.f1_score(pred, newsgroups_test.target, average='macro'))
-
 #print(x)
-"""
+
 Sum_of_squared_distances = []
-K = range(2,10)
+K = range(2,40)
 for k in K:
     km = KMeans(n_clusters=k, max_iter=200, n_init=10)
     km = km.fit(x)
@@ -74,15 +68,32 @@ plt.xlabel('k')
 plt.ylabel('Sum_of_squared_distances')
 plt.title('Elbow Method For Optimal k')
 plt.show()
-"""
 
-true_k = 20
+# 15 20 25
+true_k = 15
 model = KMeans(n_clusters=true_k, init='k-means++', max_iter=200, n_init=10)
 model.fit(x)
 labels=model.labels_
 forums=pd.DataFrame(list(zip(newsgroups_train.target_names,labels)),columns=['title','cluster'])
 print(forums.sort_values(by=['cluster']))
 
+"""
+
+
+    Homogeniety: degree to which clusters contain element of the same class
+
+    Completeness : degree to which all elements belonging to certain category are found in a cluster
+
+    V-measure : mean of homogeniety and completeness
+
+    Silhouette score : how similar an object is to its own cluster .
+    
+"""
+print("Homogeneity: %0.3f" % metrics.homogeneity_score(newsgroups_train.target, labels))
+print("Completeness: %0.3f" % metrics.completeness_score(newsgroups_train.target, labels))
+print("V-measure: %0.3f" % metrics.v_measure_score(newsgroups_train.target, labels))
+print("Silhouette Coefficient: %0.3f"
+      % metrics.silhouette_score(x, labels, sample_size=1000))
 
 """
 result={'cluster':labels,'forum':newsgroups_train.data}
